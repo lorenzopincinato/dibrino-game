@@ -2,7 +2,7 @@
 import sys
 import pygame
 import random
-import pyganim
+from scripts import pyganim
 
 
 # define some functions
@@ -43,6 +43,34 @@ def loadImages():
         str(num).rjust(3, '0')), 0.15) for num in range(3)]
     animObjs['fireball_down_fall'] = pyganim.PygAnimation(imagesAndDurations)
 
+    imagesAndDurations = [('./images/fireball/down_explosion.%s.png' % (
+        str(num).rjust(3, '0')), 0.15) for num in range(3)]
+    animObjs['fireball_down_explosion'] = pyganim.PygAnimation(
+                                                            imagesAndDurations)
+
+
+class Explosion:
+    def __init__(self):
+        self.x = -1
+        self.count = 0
+        self.exploding = False
+
+    def explodeBegin(self, x):
+        self.exploding = True
+        self.x = x
+        animObjs['fireball_down_explosion'].blit(windowSurface, (self.x, 400))
+        self.count = 1
+
+    def explode(self):
+        animObjs['fireball_down_explosion'].blit(windowSurface, (self.x, 400))
+        self.count += 1
+
+        if self.count == 4:
+            self.exploding = False
+
+    def getExploding(self):
+        return self.exploding
+
 
 class Fireball():
     def __init__(self):
@@ -57,6 +85,11 @@ class Fireball():
     def fall(self, fall_rate):
         if self.y > 415:
             self.spawned = False
+            for explosion in explosions:
+                if not explosion.getExploding():
+                    explosion.__init__()
+                    explosion.explodeBegin(self.x)
+                    break
             return 1
 
         self.y += fall_rate
@@ -73,6 +106,9 @@ class Fireball():
 
 
 pygame.init()
+
+background = pygame.image.load("./images/background.png")
+gameover = pygame.image.load("./images/gameover.png")
 
 # define some constants
 LEFT = 'left'
@@ -119,14 +155,17 @@ running = moveLeft = moveRight = False
 over = False
 
 fireballs = [Fireball() for i in range(10)]
-
 for fireball in fireballs:
     fireball.__init__()
+
+explosions = [Explosion() for i in range(10)]
+for explosion in explosions:
+    explosion.__init__()
 
 while True:
     # main game loop
     while not over:
-        windowSurface.fill(bg_color)
+        windowSurface.blit(background, (0, 0))
         for event in pygame.event.get():  # event handling loop
             # handle ending the program
             if event.type == pygame.QUIT:
@@ -157,6 +196,10 @@ while True:
 
                 elif event.key == pygame.K_RIGHT:
                     moveRight = False
+
+        for explosion in explosions:
+            if explosion.getExploding():
+                explosion.explode()
 
         if moveLeft or moveRight:
             # draw the correct walking/running sprite from the animation object
@@ -217,14 +260,14 @@ while True:
 
         FALL_RATE = 10 + score // 10
 
-        score_rendered = sys_font.render(str(score), 0, (255, 255, 255))
+        score_rendered = sys_font.render(str(score), 0, (0, 0, 0))
         windowSurface.blit(score_rendered, (20, 20))
 
         pygame.display.update()
         mainClock.tick(24)  # Feel free to experiment with any FPS setting
 
     while over:
-        windowSurface.fill(bg_color)
+        windowSurface.blit(gameover, (0, 0))
         for event in pygame.event.get():  # event handling loop
             # handle ending the program
             if event.type == pygame.QUIT:
@@ -235,10 +278,10 @@ while True:
                     over = False
                     score = 0
 
-        game_over = sys_font.render("GAME OVER", 0, (255, 255, 255))
+        game_over = sys_font.render("GAME OVER", 0, (0, 0, 0))
         windowSurface.blit(game_over, (200, 200))
 
-        final_score = sys_font.render(str(score), 0, (255, 255, 255))
+        final_score = sys_font.render(str(score), 0, (0, 0, 0))
         windowSurface.blit(final_score, (310, 300))
 
         for fireball in fireballs:
@@ -250,5 +293,3 @@ while True:
 
         pygame.display.update()
         mainClock.tick(24)  # Feel free to experiment with any FPS setting
-
-# https://ansimuz.itch.io/magic-cliffs-environment/download/eyJleHBpcmVzIjoxNTExNzc5NjAyLCJpZCI6NjQ4Mjh9.gUCycjafYUVjsTu8Ze96gBCN2SM%3d
