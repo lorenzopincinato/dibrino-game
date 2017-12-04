@@ -2,7 +2,7 @@
 import sys
 import pygame
 import random
-from scripts import pyganim
+import pyganim
 
 
 # define some functions
@@ -39,6 +39,38 @@ def loadImages():
     animObjs['vita_left_run'].flip(True, False)
     animObjs['vita_left_run'].makeTransformsPermanent()
 
+    imagesAndDurations = [('./images/fireball/down_fall.%s.png' % (
+        str(num).rjust(3, '0')), 0.15) for num in range(3)]
+    animObjs['fireball_down_fall'] = pyganim.PygAnimation(imagesAndDurations)
+
+
+class Fireball():
+    def __init__(self):
+        if random.randrange(0, 75, 1) == 1:
+            self.x = random.randrange(0, 640, 32)
+            self.y = 0
+
+            self.spawned = True
+        else:
+            self.spawned = False
+
+    def fall(self, fall_rate):
+        if self.y > 415:
+            self.spawned = False
+            return 1
+
+        self.y += fall_rate
+        return 0
+
+    def getX(self):
+        return self.x
+
+    def getY(self):
+        return self.y
+
+    def getSpawned(self):
+        return self.spawned
+
 
 pygame.init()
 
@@ -60,7 +92,6 @@ playerHeight = 96
 animObjs = {}
 # loading all game images, including PygAnimation files
 loadImages()
-fireball = pygame.image.load('./images/fireball.png')
 
 moveConductor = pyganim.PygConductor(animObjs)
 
@@ -77,18 +108,20 @@ y_fireball = 416
 
 WALK_RATE = 6
 RUN_RATE = 10
-FALL_RATE = 6
+FALL_RATE = 10
 
-mortes = 0
+score = 0
 
 sys_font = pygame.font.SysFont("None", 60)
-
-
-# se YFireball > 400 gera novo random e seta o Y pra 0
 
 running = moveLeft = moveRight = False
 
 over = False
+
+fireballs = [Fireball() for i in range(10)]
+
+for fireball in fireballs:
+    fireball.__init__()
 
 while True:
     # main game loop
@@ -158,12 +191,19 @@ while True:
             elif direction == RIGHT:
                 animObjs['vita_right_stand'].blit(windowSurface, (x, y))
 
-        if y_fireball > 415:
-            x_fireball = random.randrange(0, 640, 32)
-            y_fireball = 0
+        # for fireball in fireballs:
+        for fireball in fireballs:
+            if not fireball.getSpawned():
+                fireball.__init__()
 
-        y_fireball += FALL_RATE
-        windowSurface.blit(fireball, (x_fireball, y_fireball))
+            else:
+                score += fireball.fall(FALL_RATE)
+                animObjs['fireball_down_fall'].blit(windowSurface, (
+                    fireball.getX(), fireball.getY()))
+
+                if fireball.getX() < (x + 62) and (fireball.getX() + 20) > x:
+                    if fireball.getY() > 350:
+                        over = True
 
         # make sure the player does move off the screen
         if x < 0 - (96 - playerWidth):
@@ -175,9 +215,10 @@ while True:
         if y > WINDOWHEIGHT - playerHeight:
             y = WINDOWHEIGHT - playerHeight
 
-        if x_fireball < (x + 76) and (x_fireball + 32) > x:
-            if y_fireball > 350:
-                over = True
+        FALL_RATE = 10 + score // 10
+
+        score_rendered = sys_font.render(str(score), 0, (255, 255, 255))
+        windowSurface.blit(score_rendered, (20, 20))
 
         pygame.display.update()
         mainClock.tick(24)  # Feel free to experiment with any FPS setting
@@ -190,12 +231,18 @@ while True:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                over = False
+                if event.key == pygame.K_SPACE:
+                    over = False
+                    score = 0
 
-        mortes_rendered = sys_font.render("GAME OVER", 0, (255, 255, 255))
-        windowSurface.blit(mortes_rendered, (200, 200))
+        game_over = sys_font.render("GAME OVER", 0, (255, 255, 255))
+        windowSurface.blit(game_over, (200, 200))
 
-        y_fireball = 416
+        final_score = sys_font.render(str(score), 0, (255, 255, 255))
+        windowSurface.blit(final_score, (310, 300))
+
+        for fireball in fireballs:
+            fireball.spawned = False
         x = 270  # x and y are the player's position
         y = 370
 
@@ -203,3 +250,5 @@ while True:
 
         pygame.display.update()
         mainClock.tick(24)  # Feel free to experiment with any FPS setting
+
+# https://ansimuz.itch.io/magic-cliffs-environment/download/eyJleHBpcmVzIjoxNTExNzc5NjAyLCJpZCI6NjQ4Mjh9.gUCycjafYUVjsTu8Ze96gBCN2SM%3d
