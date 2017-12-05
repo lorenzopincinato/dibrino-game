@@ -1,2 +1,2 @@
 # Dibrino
-Simple game written in Python
+![](/images/vita/right_stand.000.png)
